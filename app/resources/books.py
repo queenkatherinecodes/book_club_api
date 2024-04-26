@@ -1,15 +1,48 @@
+import urllib.parse
 from flask import jsonify
 from services.google_books import GoogleBooksService
 from services.gemini import GenAIService
 from services.open_library import OpenLibraryService
 
+VALID_GENRES = ['Fiction', 'Children', 'Biography', 'Science', 'Science Fiction', 'Fantasy', 'Other']
+
 class BooksResource:
     books = []  # Placeholder for storing books in memory
 
     @staticmethod
-    def get_books():
-        return jsonify(BooksResource.books), 200
+    def get_books(query_string):
+        if not query_string:
+            return jsonify(BooksResource.books), 200
 
+        query_string = urllib.parse.unquote_plus(query_string)
+        query_params = query_string.split('&')
+        filtered_books = BooksResource.books.copy()
+
+        for param in query_params:
+            if param.startswith("language contains"):
+                param_parts = param.split()
+                if len(param_parts) != 3:
+                    return jsonify({"error": "Invalid query format for querying by language"}), 422
+
+                _, _, language = param_parts
+                if language not in ["heb", "eng", "spa", "chi"]:
+                    return jsonify({"error": "Invalid language code"}), 422
+
+                filtered_books = [
+                    book for book in filtered_books
+                    if language in book.get('languages', [])
+                ]
+            else:
+                if '=' not in param:
+                    continue  # Skip parameters without '='
+                field, value = param.split('=', 1)
+                if field not in ["summary", "language"]:
+                    filtered_books = [
+                        book for book in filtered_books
+                        if book.get(field) == value
+                    ]
+        return jsonify(filtered_books), 200
+    
     @staticmethod
     def create_book(book_data):
         title = book_data.get('title')
@@ -19,6 +52,9 @@ class BooksResource:
         if not title or not isbn or not genre:
             return jsonify({"error": "Missing required fields"}), 400
 
+        if not BooksResource.is_valid_genre(genre):
+            return jsonify({"error": "Unprocessable Entity"}), 422
+        
         google_books_data = GoogleBooksService.get_book_details(isbn)
         if not google_books_data:
             return jsonify({"error": "Book not found in Google Books API"}), 404
@@ -55,6 +91,15 @@ class BooksResource:
         if not book:
             return jsonify({"error": "Book not found"}), 404
 
+        required_fields = ['title', 'authors', 'ISBN', 'genre', 'publisher', 'publishedDate', 'languages']
+        missing_fields = [field for field in required_fields if field not in book_data]
+
+        if missing_fields:
+            return jsonify({"error": "Missing required fields"}), 422
+
+        if 'genre' in book_data and not BooksResource.is_valid_genre(book_data['genre']):
+            return jsonify({"error": "Invalid genre"}), 422
+        
         book.update(book_data)
         return jsonify({"id": book_id}), 200
 
@@ -66,6 +111,10 @@ class BooksResource:
 
         BooksResource.books.remove(book)
         return jsonify({"id": book_id}), 200
+    
+    @staticmethod
+    def is_valid_genre(genre):
+        return genre in VALID_GENRES
     
     @staticmethod
     def replace_unknown(value):

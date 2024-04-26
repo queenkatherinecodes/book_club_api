@@ -6,7 +6,9 @@ app = Flask(__name__)
 @app.route('/books', methods=['GET', 'POST'])
 def handle_books():
     if request.method == 'GET':
-        return BooksResource.get_books()
+        query_string = request.query_string.decode('utf-8')
+        print(query_string)
+        return BooksResource.get_books(query_string)
     elif request.method == 'POST':
         if not request.is_json:
             return jsonify("Unsupported Media Type"), 415
