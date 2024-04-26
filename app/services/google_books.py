@@ -1,3 +1,4 @@
+from flask import jsonify
 import requests
 
 class GoogleBooksService:
@@ -17,11 +18,11 @@ class GoogleBooksService:
                 published_date = volume_info.get("publishedDate", "unknown")
 
                 return {
-                    "authors": ", ".join(authors),
+                    "authors": " and ".join(authors),
                     "publisher": publisher,
                     "publishedDate": published_date
                 }
             else:
                 return None
         else:
-            raise Exception(f"Error fetching book details from Google Books API. Status code: {response.status_code}")
+            return jsonify({"error": "Unable to connect to Google"}), 500
