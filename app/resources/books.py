@@ -51,9 +51,11 @@ class BooksResource:
 
         if not title or not isbn or not genre:
             return jsonify({"error": "Missing required fields"}), 400
-
+        existing_book = next((book for book in BooksResource.books if book['ISBN'] == isbn), None)
+        if existing_book:
+            return jsonify({"error": "Book with the provided ISBN already exists"}), 422
         if not BooksResource.is_valid_genre(genre):
-            return jsonify({"error": "Unprocessable Entity"}), 422
+            return jsonify({"error": "Invalid Genre"}), 422
         
         google_books_data = GoogleBooksService.get_book_details(isbn)
         if not google_books_data:
@@ -75,7 +77,6 @@ class BooksResource:
         }
 
         BooksResource.books.append(book)
-
         return jsonify(book), 201
 
     @staticmethod
