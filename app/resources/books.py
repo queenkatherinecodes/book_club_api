@@ -19,28 +19,22 @@ class BooksResource:
         filtered_books = BooksResource.books.copy()
 
         for param in query_params:
-            if param.startswith("language contains"):
-                param_parts = param.split()
-                if len(param_parts) != 3:
-                    return jsonify({"error": "Invalid query format for querying by language"}), 422
+            if '=' not in param:
+                continue  # Skip parameters without '='
+            field, value = param.split('=', 1)
 
-                _, _, language = param_parts
-                if language not in ["heb", "eng", "spa", "chi"]:
+            if field == "languages":
+                if value not in ["heb", "eng", "spa", "chi"]:
                     return jsonify({"error": "Invalid language code"}), 422
-
                 filtered_books = [
                     book for book in filtered_books
-                    if language in book.get('languages', [])
+                    if value in book.get('languages', [])
                 ]
-            else:
-                if '=' not in param:
-                    continue  # Skip parameters without '='
-                field, value = param.split('=', 1)
-                if field not in ["summary", "language"]:
-                    filtered_books = [
-                        book for book in filtered_books
-                        if book.get(field) == value
-                    ]
+            elif field not in ["summary", "language"]:
+                filtered_books = [
+                    book for book in filtered_books
+                    if book.get(field) == value
+                ]
         return jsonify(filtered_books), 200
     
     @staticmethod
