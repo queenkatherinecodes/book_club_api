@@ -16,7 +16,7 @@ def handle_books():
         new_book, status = BooksResource.create_book(book_data)
         if status == 201:
             book_id = new_book.json['id']
-            book_title = new_book.json['title']
+            book_title = book_data['title']
             RatingsResource.add_new_rating(book_id, book_title)
         return new_book, status
 
