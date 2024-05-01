@@ -71,7 +71,7 @@ class BooksResource:
         }
 
         BooksResource.books.append(book)
-        return jsonify(book), 201
+        return jsonify({'id': book['id']}), 201
 
     @staticmethod
     def get_book(book_id):
